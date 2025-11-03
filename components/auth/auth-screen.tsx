@@ -22,8 +22,8 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
   const { setEffect } = useLightEffects()
 
   const [mode, setMode] = useState<AuthMode>(initialMode)
-  const modeRef = useRef<AuthMode>(initialMode)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [playEntrance, setPlayEntrance] = useState(true)
 
   const [loginForm, setLoginForm] = useState({ email: "devmaster.learning@gmail.com", password: "" })
   const [loginShowPassword, setLoginShowPassword] = useState(false)
@@ -58,8 +58,10 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
   const registerButtonRef = useRef<HTMLButtonElement>(null)
   const roleSelectionRef = useRef<HTMLDivElement>(null)
 
-  const [stageHeight, setStageHeight] = useState<number | undefined>(undefined)
-  const [shouldCenter, setShouldCenter] = useState(true)
+  const [alignment, setAlignment] = useState<{ login: boolean; register: boolean }>({
+    login: true,
+    register: true,
+  })
 
   const transitionTimelineRef = useRef<gsap.core.Timeline | null>(null)
 
@@ -70,33 +72,53 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
     return card?.offsetHeight ?? wrapperEl.offsetHeight ?? 0
   }, [])
 
-  const updateStageLayout = useCallback(
-    (forcedMode?: AuthMode) => {
-      const activeMode = forcedMode ?? modeRef.current
-      const activeHeight = activeMode === "login" ? getCardHeight(loginWrapperRef) : getCardHeight(registerWrapperRef)
-      const viewportHeight = typeof window !== "undefined" ? window.innerHeight : undefined
+  const shouldCenter = useCallback((height: number, viewport?: number) => {
+    return !(viewport && height && height > viewport - 96)
+  }, [])
 
-      if (viewportHeight && activeHeight && activeHeight > viewportHeight - 96) {
-        setShouldCenter(false)
-        setStageHeight(undefined)
-      } else {
-        setShouldCenter(true)
-        setStageHeight(activeHeight || undefined)
+  const updateStageLayout = useCallback(
+    (target: AuthMode | "both" = "both") => {
+      const viewportHeight = typeof window !== "undefined" ? window.innerHeight : undefined
+      const updates: Partial<{ login: boolean; register: boolean }> = {}
+
+      const evalMode = (modeKey: AuthMode) => {
+        const height =
+          modeKey === "login" ? getCardHeight(loginWrapperRef) : getCardHeight(registerWrapperRef)
+        updates[modeKey] = shouldCenter(height, viewportHeight)
       }
+
+      if (target === "both") {
+        evalMode("login")
+        evalMode("register")
+      } else {
+        evalMode(target)
+      }
+
+      setAlignment((prev) => {
+        let changed = false
+        const next = { ...prev }
+        for (const key of Object.keys(updates) as (keyof typeof updates)[]) {
+          const value = updates[key]
+          if (typeof value === "boolean" && next[key] !== value) {
+            next[key] = value
+            changed = true
+          }
+        }
+        return changed ? next : prev
+      })
     },
-    [getCardHeight],
+    [getCardHeight, shouldCenter],
   )
 
   useEffect(() => {
-    modeRef.current = mode
-    updateStageLayout()
-    const handleResize = () => updateStageLayout()
+    updateStageLayout("both")
+    const handleResize = () => updateStageLayout(mode)
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [mode, updateStageLayout])
 
   useEffect(() => {
-    const raf = requestAnimationFrame(() => updateStageLayout())
+    const raf = requestAnimationFrame(() => updateStageLayout(mode))
     return () => cancelAnimationFrame(raf)
   }, [mode, loginForm, registerForm, updateStageLayout])
 
@@ -170,6 +192,7 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
     setEffect,
     withTimeline: mode === "register" ? extendRegisterTimeline : undefined,
     enableParallax: mode === "login",
+    playEntrance,
   })
 
   const switchMode = useCallback(
@@ -179,6 +202,7 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
       const targetWrapper = (nextMode === "login" ? loginWrapperRef : registerWrapperRef).current
       if (!currentWrapper || !targetWrapper) return
 
+      setPlayEntrance(false)
       killBaseAnimations()
       transitionTimelineRef.current?.kill()
 
@@ -189,10 +213,9 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
           onComplete: () => {
             gsap.set(currentWrapper, { pointerEvents: "none" })
             gsap.set(targetWrapper, { pointerEvents: "auto" })
-            modeRef.current = nextMode
             setMode(nextMode)
             setIsTransitioning(false)
-            updateStageLayout(nextMode)
+            requestAnimationFrame(() => updateStageLayout(nextMode))
             transitionTimelineRef.current = null
           },
         })
@@ -202,13 +225,12 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
     [killBaseAnimations, mode, isTransitioning, updateStageLayout],
   )
 
-  const updateAuthQuery = useCallback(
-    (nextMode: AuthMode) => {
-      const url = nextMode === "login" ? "/?auth=login" : "/?auth=register"
-      router.replace(url, { scroll: false })
-    },
-    [router],
-  )
+  const updateAuthQuery = useCallback((nextMode: AuthMode) => {
+    if (typeof window === "undefined") return
+    const url = new URL(window.location.href)
+    url.searchParams.set("auth", nextMode)
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`)
+  }, [])
 
   const handleInputFocus = useCallback((event: React.FocusEvent<HTMLInputElement>) => {
     gsap.to(event.currentTarget, {
@@ -320,11 +342,15 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
     }
   }, [])
 
+  const activeAlignment = mode === "login" ? alignment.login : alignment.register
+  const loginAlignment = alignment.login
+  const registerAlignment = alignment.register
+
   return (
     <main
       ref={containerRef}
       className={`relative flex min-h-screen justify-center overflow-hidden px-4 ${
-        shouldCenter ? "items-center py-12" : "items-start py-8"
+        activeAlignment ? "items-center py-12" : "items-start py-8"
       } sm:py-12`}
     >
       <div ref={floatingElementsRef} className="pointer-events-none absolute inset-0">
@@ -338,7 +364,7 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
           ref={loginWrapperRef}
           className="absolute left-1/2 w-full px-0 sm:px-0"
           style={
-            shouldCenter
+            loginAlignment
               ? { top: "50%", transform: "translate(-50%, -50%)" }
               : { top: "1.5rem", transform: "translateX(-50%)" }
           }
@@ -452,8 +478,8 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
           ref={registerWrapperRef}
           className="absolute left-1/2 w-full px-0 sm:px-0"
           style={{
-            top: shouldCenter ? "50%" : "1.5rem",
-            transform: shouldCenter ? "translate(-50%, -50%)" : "translateX(-50%)",
+            top: registerAlignment ? "50%" : "1.5rem",
+            transform: registerAlignment ? "translate(-50%, -50%)" : "translateX(-50%)",
           }}
         >
           <Card

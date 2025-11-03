@@ -20,6 +20,7 @@ export interface AuthAnimationConfig {
   withTimeline?: (timeline: gsap.core.Timeline) => void
   enableParallax?: boolean
   lightEffect?: { mode: LightEffectMode; intensity: number; color: LightEffectColor }
+  playEntrance?: boolean
 }
 
 const DEFAULT_LIGHT_EFFECT: { mode: LightEffectMode; intensity: number; color: LightEffectColor } = {
@@ -40,6 +41,7 @@ export function useAuthAnimation({
   withTimeline,
   enableParallax = true,
   lightEffect = DEFAULT_LIGHT_EFFECT,
+  playEntrance = true,
 }: AuthAnimationConfig) {
   const timelineRef = useRef<gsap.core.Timeline | null>(null)
   const originalTitle = useRef<string | null>(null)
@@ -91,9 +93,6 @@ export function useAuthAnimation({
     }
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline()
-      timelineRef.current = tl
-
       if (floatingElementsRef?.current) {
         const elements = floatingElementsRef.current.querySelectorAll<HTMLElement>(".float-element")
         elements.forEach((el, index) => {
@@ -109,6 +108,14 @@ export function useAuthAnimation({
           })
         })
       }
+
+      if (!playEntrance) {
+        timelineRef.current = null
+        return
+      }
+
+      const tl = gsap.timeline()
+      timelineRef.current = tl
 
       tl.from(containerRef.current, {
         opacity: 0,
@@ -234,6 +241,7 @@ export function useAuthAnimation({
     setEffect,
     subtitleRef,
     titleRef,
+    playEntrance,
     withTimeline,
   ])
 
