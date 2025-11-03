@@ -2,7 +2,7 @@
 
 Sistema integral de gestión de servicios (Service Desk) construido con Next.js 16, React 19 y TypeScript. Una solución moderna y elegante para la administración de tickets, servicios y soporte técnico.
 
-
+![Service Desk](./login.png)
 
 ## ✨ Características
 
