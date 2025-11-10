@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useDeferredValue } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card"
 import { Plus, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { FormFieldBuilder } from "@/components/forms/form-field-builder"
-import { FormPreview } from "@/components/forms/form-preview"
+import { TemplatePreview } from "@/components/forms/template-preview"
 import type { FormTemplate, FormField } from "@/types/form-template"
 
 const createId = () => {
@@ -27,6 +27,7 @@ export default function EditTemplatePage() {
   const [template, setTemplate] = useState<FormTemplate | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const deferredTemplate = useDeferredValue(template)
 
   useEffect(() => {
     const loadTemplate = () => {
@@ -55,6 +56,7 @@ export default function EditTemplatePage() {
       </div>
     )
   }
+  const previewTemplate = deferredTemplate ?? template
 
   const handleAddField = () => {
     const newField: FormField = {
@@ -244,8 +246,8 @@ export default function EditTemplatePage() {
           className="space-y-4 sticky top-6 h-fit"
         >
           <div>
-            <h3 className="font-semibold text-foreground mb-3">Vista Previa</h3>
-            <FormPreview template={template} />
+            <h3 className="font-semibold text-foreground mb-3">Vista Previa Empresarial</h3>
+            <TemplatePreview template={previewTemplate} />
           </div>
 
           <div className="flex gap-2">

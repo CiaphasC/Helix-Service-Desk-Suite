@@ -58,10 +58,7 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
   const registerButtonRef = useRef<HTMLButtonElement>(null)
   const roleSelectionRef = useRef<HTMLDivElement>(null)
 
-  const [alignment, setAlignment] = useState<{ login: boolean; register: boolean }>({
-    login: true,
-    register: true,
-  })
+  const [registerCentered, setRegisterCentered] = useState(true)
 
   const transitionTimelineRef = useRef<gsap.core.Timeline | null>(null)
 
@@ -76,51 +73,37 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
     return !(viewport && height && height > viewport - 96)
   }, [])
 
-  const updateStageLayout = useCallback(
-    (target: AuthMode | "both" = "both") => {
-      const viewportHeight = typeof window !== "undefined" ? window.innerHeight : undefined
-      const updates: Partial<{ login: boolean; register: boolean }> = {}
-
-      const evalMode = (modeKey: AuthMode) => {
-        const height =
-          modeKey === "login" ? getCardHeight(loginWrapperRef) : getCardHeight(registerWrapperRef)
-        updates[modeKey] = shouldCenter(height, viewportHeight)
-      }
-
-      if (target === "both") {
-        evalMode("login")
-        evalMode("register")
-      } else {
-        evalMode(target)
-      }
-
-      setAlignment((prev) => {
-        let changed = false
-        const next = { ...prev }
-        for (const key of Object.keys(updates) as (keyof typeof updates)[]) {
-          const value = updates[key]
-          if (typeof value === "boolean" && next[key] !== value) {
-            next[key] = value
-            changed = true
-          }
-        }
-        return changed ? next : prev
-      })
-    },
-    [getCardHeight, shouldCenter],
-  )
+  const updateRegisterLayout = useCallback(() => {
+    const viewportHeight = typeof window !== "undefined" ? window.innerHeight : undefined
+    const height = getCardHeight(registerWrapperRef)
+    const next = shouldCenter(height, viewportHeight)
+    setRegisterCentered((prev) => (prev === next ? prev : next))
+  }, [getCardHeight, shouldCenter])
 
   useEffect(() => {
-    updateStageLayout("both")
-    const handleResize = () => updateStageLayout(mode)
+    updateRegisterLayout()
+  }, [updateRegisterLayout])
+
+  useEffect(() => {
+    if (mode !== "register") return
+    updateRegisterLayout()
+    const handleResize = () => updateRegisterLayout()
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [mode, updateStageLayout])
+  }, [mode, updateRegisterLayout])
 
   useEffect(() => {
-    const raf = requestAnimationFrame(() => updateStageLayout(mode))
+    if (mode !== "register") return
+    const raf = requestAnimationFrame(() => updateRegisterLayout())
     return () => cancelAnimationFrame(raf)
-  }, [mode, loginForm, registerForm, updateStageLayout])
+  }, [
+    mode,
+    registerForm,
+    registerShowPassword,
+    registerShowConfirmPassword,
+    selectedRole,
+    updateRegisterLayout,
+  ])
 
   useEffect(() => {
     const loginEl = loginWrapperRef.current
@@ -131,7 +114,7 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
       autoAlpha: mode === "register" ? 1 : 0,
       pointerEvents: mode === "register" ? "auto" : "none",
     })
-  }, [])
+  }, [mode])
 
   useEffect(
     () => () => {
@@ -200,29 +183,51 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
       if (nextMode === mode || isTransitioning) return
       const currentWrapper = (mode === "login" ? loginWrapperRef : registerWrapperRef).current
       const targetWrapper = (nextMode === "login" ? loginWrapperRef : registerWrapperRef).current
-      if (!currentWrapper || !targetWrapper) return
+      const currentCard = (mode === "login" ? loginCardRef : registerCardRef).current
+      const targetCard = (nextMode === "login" ? loginCardRef : registerCardRef).current
+      if (!currentWrapper || !targetWrapper || !currentCard || !targetCard) return
 
       setPlayEntrance(false)
       killBaseAnimations()
       transitionTimelineRef.current?.kill()
+
+      gsap.set(targetWrapper, { autoAlpha: 1, pointerEvents: "auto" })
+      gsap.set(currentWrapper, { autoAlpha: 1 })
 
       setIsTransitioning(true)
       transitionTimelineRef.current = gsap
         .timeline({
           defaults: { duration: 0.6, ease: "power2.inOut" },
           onComplete: () => {
-            gsap.set(currentWrapper, { pointerEvents: "none" })
-            gsap.set(targetWrapper, { pointerEvents: "auto" })
+            gsap.set(currentWrapper, { autoAlpha: 0, pointerEvents: "none" })
+            gsap.set(targetWrapper, { autoAlpha: 1, pointerEvents: "auto" })
             setMode(nextMode)
             setIsTransitioning(false)
-            requestAnimationFrame(() => updateStageLayout(nextMode))
+            if (nextMode === "register") {
+              requestAnimationFrame(() => updateRegisterLayout())
+            }
             transitionTimelineRef.current = null
           },
         })
-        .to(currentWrapper, { autoAlpha: 0, y: 20 }, 0)
-        .fromTo(targetWrapper, { autoAlpha: 0, y: -20 }, { autoAlpha: 1, y: 0 }, 0)
+        .to(
+          currentCard,
+          {
+            autoAlpha: 0,
+            y: 20,
+          },
+          0,
+        )
+        .fromTo(
+          targetCard,
+          { autoAlpha: 0, y: -20 },
+          {
+            autoAlpha: 1,
+            y: 0,
+          },
+          0,
+        )
     },
-    [killBaseAnimations, mode, isTransitioning, updateStageLayout],
+    [killBaseAnimations, mode, isTransitioning, updateRegisterLayout],
   )
 
   const updateAuthQuery = useCallback((nextMode: AuthMode) => {
@@ -342,9 +347,9 @@ export function AuthScreen({ initialMode = "login" }: AuthScreenProps) {
     }
   }, [])
 
-  const activeAlignment = mode === "login" ? alignment.login : alignment.register
-  const loginAlignment = alignment.login
-  const registerAlignment = alignment.register
+  const activeAlignment = mode === "login" ? true : registerCentered
+  const loginAlignment = true
+  const registerAlignment = registerCentered
 
   return (
     <main

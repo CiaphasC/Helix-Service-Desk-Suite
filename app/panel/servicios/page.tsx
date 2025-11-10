@@ -59,7 +59,9 @@ export default function ServicesPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [isLoading, setIsLoading] = useState(true)
   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
-  const [isMobile, setIsMobile] = useState(false)
+  const [isCompactView, setIsCompactView] = useState(false)
+
+  const VIEW_TOGGLE_BREAKPOINT = 1280
 
   useEffect(() => {
     const loadServices = () => {
@@ -81,9 +83,9 @@ export default function ServicesPage() {
 
     loadServices()
     const handleResize = () => {
-      const isMobileScreen = window.innerWidth < 1024
-      setIsMobile(isMobileScreen)
-      if (isMobileScreen) {
+      const compactScreen = window.innerWidth < VIEW_TOGGLE_BREAKPOINT
+      setIsCompactView(compactScreen)
+      if (compactScreen) {
         setViewMode("cards")
       }
     }
@@ -156,6 +158,8 @@ export default function ServicesPage() {
       </div>
     )
   }
+
+  const effectiveViewMode = isCompactView ? "cards" : viewMode
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
@@ -247,32 +251,34 @@ export default function ServicesPage() {
             <option value="inactivo">Inactivo</option>
           </motion.select>
 
-          <div className="hidden sm:flex gap-1 bg-secondary/50 border border-primary/20 rounded-lg p-1">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setViewMode("table")}
-              className={cn(
-                "p-2 rounded transition-colors",
-                viewMode === "table" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground",
-              )}
-              title="Vista tabla"
-            >
-              <List className="w-4 h-4" />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setViewMode("cards")}
-              className={cn(
-                "p-2 rounded transition-colors",
-                viewMode === "cards" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground",
-              )}
-              title="Vista tarjetas"
-            >
-              <Grid3x3 className="w-4 h-4" />
-            </motion.button>
-          </div>
+          {!isCompactView && (
+            <div className="flex gap-1 bg-secondary/50 border border-primary/20 rounded-lg p-1">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setViewMode("table")}
+                className={cn(
+                  "p-2 rounded transition-colors",
+                  viewMode === "table" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground",
+                )}
+                title="Vista tabla"
+              >
+                <List className="w-4 h-4" />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setViewMode("cards")}
+                className={cn(
+                  "p-2 rounded transition-colors",
+                  viewMode === "cards" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground",
+                )}
+                title="Vista tarjetas"
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </motion.button>
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -282,7 +288,7 @@ export default function ServicesPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        {viewMode === "table" ? (
+        {effectiveViewMode === "table" ? (
           <ServiceTable services={filteredServices} onEdit={handleEditService} onDelete={handleDeleteService} />
         ) : (
           <ServiceCards services={filteredServices} onEdit={handleEditService} onDelete={handleDeleteService} />

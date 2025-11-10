@@ -19,6 +19,7 @@ import {
   Info,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -139,14 +140,12 @@ export function AdminHeader() {
           <div className="flex items-center gap-1 ml-auto">
             <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
               <DropdownMenuTrigger asChild>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg transition-colors relative group"
-                >
-                  <Bell className="w-4 h-4" />
+                <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg transition-colors relative group">
+                  <motion.span whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="inline-flex">
+                    <Bell className="w-4 h-4" />
+                  </motion.span>
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-                </motion.button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
@@ -193,27 +192,27 @@ export function AdminHeader() {
             </DropdownMenu>
 
             {/* Settings */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <Button
+              variant="ghost"
+              size="icon"
               className="p-2 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg transition-colors"
             >
-              <Settings className="w-4 h-4" />
-            </motion.button>
+              <motion.span whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="inline-flex">
+                <Settings className="w-4 h-4" />
+              </motion.span>
+            </Button>
 
             {/* User menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-2 pl-3 pr-2 py-1.5 hover:bg-primary/10 rounded-lg transition-colors"
-                >
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/50 to-accent/50 flex items-center justify-center flex-shrink-0">
-                    <User className="w-3.5 h-3.5 text-primary-foreground" />
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </motion.button>
+                <button className="flex items-center gap-2 pl-3 pr-2 py-1.5 hover:bg-primary/10 rounded-lg transition-colors">
+                  <motion.span whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="inline-flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/50 to-accent/50 flex items-center justify-center flex-shrink-0">
+                      <User className="w-3.5 h-3.5 text-primary-foreground" />
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </motion.span>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"

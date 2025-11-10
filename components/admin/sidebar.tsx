@@ -17,12 +17,21 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import gsap from "gsap"
+import { useIsMobile } from "@/hooks/use-mobile"
 
-const menuItems = [
+interface MenuItem {
+  label: string
+  href: string
+  icon: typeof LayoutDashboard
+  matchChildren?: boolean
+}
+
+const menuItems: MenuItem[] = [
   {
     label: "Inicio",
     href: "/panel",
     icon: LayoutDashboard,
+    matchChildren: false,
   },
   {
     label: "Servicios",
@@ -64,14 +73,13 @@ const menuItems = [
 export function AdminSidebar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
+  const isMobileView = useIsMobile()
   const sidebarRef = useRef<HTMLElement>(null)
   const logoRef = useRef<HTMLDivElement>(null)
   const navItemsRef = useRef<(HTMLAnchorElement | null)[]>([])
-  const bgRef = useRef<HTMLDivElement>(null)
-  const isBrowser = typeof window !== "undefined"
-
   useEffect(() => {
-    if (!isBrowser) return
+    if (typeof window === "undefined") return
 
     const sidebar = sidebarRef.current
     if (!sidebar) return
@@ -171,85 +179,56 @@ export function AdminSidebar() {
   }, [])
 
   useEffect(() => {
-    const sidebar = sidebarRef.current
-    if (!sidebar) return
-
-    const isMobile = isBrowser && window.innerWidth < 768
-
-    const tl = gsap.timeline()
-
-    if (isOpen) {
-      tl.to(sidebar, {
-        translateX: 0,
-        duration: 0.4,
-        ease: "cubic-bezier(0.34, 1.56, 0.64, 1)",
-      })
-      tl.to(
-        bgRef.current,
-        {
-          opacity: 1,
-          duration: 0.3,
-        },
-        0,
-      )
-    } else {
-      if (isMobile) {
-        tl.to(sidebar, {
-          translateX: -100,
-          duration: 0.4,
-          ease: "power2.inOut",
-        })
-      }
-      tl.to(
-        bgRef.current,
-        {
-          opacity: 0,
-          duration: 0.3,
-        },
-        0,
-      )
-    }
-  }, [isOpen])
+    setHasMounted(true)
+  }, [])
 
   useEffect(() => {
-    if (!isBrowser) return
-
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsOpen(false)
-      }
+    setIsOpen(false)
+    if (!isMobileView && sidebarRef.current) {
+      gsap.set(sidebarRef.current, { clearProps: "transform" })
     }
+  }, [isMobileView])
 
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
+  useEffect(() => {
+    if (isMobileView) {
+      setIsOpen(false)
+    }
+  }, [pathname, isMobileView])
+
+  const translateClass = hasMounted
+    ? isMobileView
+      ? isOpen
+        ? "translate-x-0"
+        : "-translate-x-full"
+      : "translate-x-0"
+    : "-translate-x-full"
 
   return (
     <>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((prev) => !prev)}
         className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
       >
         {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
 
       <div
-        ref={bgRef}
         onClick={() => setIsOpen(false)}
-        className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-30 opacity-0 pointer-events-none"
-        style={{ pointerEvents: isOpen ? "auto" : "none" }}
+        className={cn(
+          "md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-30 transition-opacity duration-300",
+          isMobileView && isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+        )}
       />
 
       <aside
         ref={sidebarRef}
         className={cn(
           "fixed md:relative left-0 top-0 h-screen w-64 z-40 md:z-auto flex flex-col overflow-y-auto transition-transform duration-300 ease-in-out",
+          "md:translate-x-0",
+          translateClass,
           "bg-gradient-to-br from-card via-card to-card/80 border-r border-border/50 backdrop-blur-xl",
           "md:bg-card md:border-r md:border-border",
         )}
-        style={{
-          transform: isBrowser && window.innerWidth >= 768 ? "translateX(0)" : undefined,
-        }}
       >
         <div ref={logoRef} className="p-6 space-y-8 flex-1 pt-16 md:pt-6">
           <div className="flex items-center gap-3 group cursor-pointer">
@@ -265,7 +244,10 @@ export function AdminSidebar() {
           <nav className="space-y-1">
             {menuItems.map((item, index) => {
               const Icon = item.icon
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+              const matchChildren = item.matchChildren ?? true
+              const isExactMatch = pathname === item.href
+              const isNestedMatch = matchChildren && pathname.startsWith(`${item.href}/`)
+              const isActive = isExactMatch || isNestedMatch
               return (
                 <Link
                   key={item.href}
