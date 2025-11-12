@@ -28,7 +28,13 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import { ProfileModal } from "./profile-modal"
+
+const ThemeToggle = dynamic(() => import("@/components/theme-toggle").then((mod) => mod.ThemeToggle), {
+  ssr: false,
+  loading: () => <div className="h-9 w-9 rounded-lg" aria-hidden="true" />,
+})
 
 export function AdminHeader() {
   const router = useRouter()
@@ -138,6 +144,7 @@ export function AdminHeader() {
 
           {/* Actions */}
           <div className="flex items-center gap-1 ml-auto">
+            <ThemeToggle />
             <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
               <DropdownMenuTrigger asChild>
                 <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg transition-colors relative group">
@@ -252,3 +259,5 @@ export function AdminHeader() {
     </>
   )
 }
+
+

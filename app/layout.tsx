@@ -21,9 +21,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body className={`font-sans antialiased dark`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    <html lang="es" className="light" suppressHydrationWarning>
+      <body className="font-sans antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          storageKey="erp-theme-v2"
+          disableTransitionOnChange
+        >
           <LightEffectsProvider>{children}</LightEffectsProvider>
         </ThemeProvider>
         <Analytics />
