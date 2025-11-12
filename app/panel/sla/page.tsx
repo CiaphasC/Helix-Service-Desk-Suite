@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Search, Edit2, Trash2 } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Grid3x3, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { SLADialog } from "@/components/categories/sla-dialog"
 import type { SLA } from "@/types/category"
 import type { Category } from "@/types/category"
+
+const VIEW_TOGGLE_BREAKPOINT = 1280
 
 export default function SLAPage() {
   const [slas, setSLAs] = useState<SLA[]>([])
@@ -19,18 +21,18 @@ export default function SLAPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedSLA, setSelectedSLA] = useState<SLA | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table")
+  const [isCompactView, setIsCompactView] = useState(false)
 
   useEffect(() => {
     const loadData = () => {
       try {
-        // Load categories
         const storedCategories = localStorage.getItem("categories")
         if (storedCategories) {
           const cats = JSON.parse(storedCategories) as Category[]
           setCategories(cats.map((c) => c.name))
         }
 
-        // Load SLAs
         const stored = localStorage.getItem("slas")
         if (stored) {
           setSLAs(JSON.parse(stored))
@@ -57,6 +59,18 @@ export default function SLAPage() {
     }
 
     loadData()
+
+    const handleResize = () => {
+      const compactScreen = window.innerWidth < VIEW_TOGGLE_BREAKPOINT
+      setIsCompactView(compactScreen)
+      if (compactScreen) {
+        setViewMode("cards")
+      }
+    }
+
+    handleResize()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
   }, [])
 
   useEffect(() => {
@@ -117,6 +131,8 @@ export default function SLAPage() {
     )
   }
 
+  const effectiveViewMode = isCompactView ? "cards" : viewMode
+
   return (
     <div className="p-6 md:p-8 space-y-6">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -137,7 +153,6 @@ export default function SLAPage() {
         </div>
       </motion.div>
 
-      {/* Search and filters */}
       <motion.div
         className="grid grid-cols-1 md:grid-cols-3 gap-4"
         initial={{ opacity: 0 }}
@@ -156,89 +171,181 @@ export default function SLAPage() {
           </div>
         </div>
 
-        <select
-          value={filterPriority}
-          onChange={(e) => setFilterPriority(e.target.value)}
-          className="px-4 py-2 rounded-lg bg-secondary/50 border border-primary/20 text-foreground cursor-pointer"
-        >
-          <option value="all">Todas las prioridades</option>
-          <option value="baja">Baja</option>
-          <option value="media">Media</option>
-          <option value="alta">Alta</option>
-        </select>
-      </motion.div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            className="px-4 py-2 rounded-lg bg-secondary/50 border border-primary/20 text-foreground cursor-pointer sm:flex-1"
+          >
+            <option value="all">Todas las prioridades</option>
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
 
-      {/* SLA table */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <Card className="border border-primary/20 bg-gradient-to-br from-card to-card/50 backdrop-blur-xl overflow-hidden">
-          {filteredSLAs.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-muted-foreground">No hay SLAs registrados</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border/50 bg-secondary/20">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Nombre</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Categoría</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Resp.</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Resolución</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Prioridad</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <AnimatePresence>
-                    {filteredSLAs.map((sla, index) => (
-                      <motion.tr
-                        key={sla.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="border-b border-border/50 hover:bg-secondary/20 transition-colors"
-                      >
-                        <td className="px-6 py-4">
-                          <p className="font-medium text-foreground">{sla.name}</p>
-                          <p className="text-sm text-muted-foreground">{sla.description}</p>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground">{sla.category}</td>
-                        <td className="px-6 py-4 text-sm text-foreground">{sla.responseTime} min</td>
-                        <td className="px-6 py-4 text-sm text-foreground">{sla.resolutionTime} min</td>
-                        <td className="px-6 py-4">
-                          <Badge variant="outline" className={getPriorityColor(sla.priority)}>
-                            {sla.priority === "alta" && "Alta"}
-                            {sla.priority === "media" && "Media"}
-                            {sla.priority === "baja" && "Baja"}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleEditSLA(sla)}
-                              className="p-2 text-muted-foreground hover:text-primary transition"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSLA(sla.id)}
-                              className="p-2 text-muted-foreground hover:text-destructive transition"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-                </tbody>
-              </table>
+          {!isCompactView && (
+            <div className="flex gap-1 bg-secondary/50 border border-primary/20 rounded-lg p-1">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setViewMode("table")}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === "table" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Vista tabla"
+              >
+                <List className="w-4 h-4" />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setViewMode("cards")}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === "cards" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Vista tarjetas"
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </motion.button>
             </div>
           )}
-        </Card>
+        </div>
       </motion.div>
 
-      {/* SLA dialog */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        {effectiveViewMode === "table" ? (
+          <Card className="border border-primary/20 bg-gradient-to-br from-card to-card/50 backdrop-blur-xl overflow-hidden">
+            {filteredSLAs.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-muted-foreground">No hay SLAs registrados</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border/50 bg-secondary/20">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Nombre</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Categoría</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Resp.</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Resolución</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Prioridad</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <AnimatePresence>
+                      {filteredSLAs.map((sla, index) => (
+                        <motion.tr
+                          key={sla.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="border-b border-border/50 hover:bg-secondary/20 transition-colors"
+                        >
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-foreground">{sla.name}</p>
+                            <p className="text-sm text-muted-foreground">{sla.description}</p>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">{sla.category}</td>
+                          <td className="px-6 py-4 text-sm text-foreground">{sla.responseTime} min</td>
+                          <td className="px-6 py-4 text-sm text-foreground">{sla.resolutionTime} min</td>
+                          <td className="px-6 py-4">
+                            <Badge variant="outline" className={getPriorityColor(sla.priority)}>
+                              {sla.priority === "alta" && "Alta"}
+                              {sla.priority === "media" && "Media"}
+                              {sla.priority === "baja" && "Baja"}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditSLA(sla)}
+                                className="p-2 text-muted-foreground hover:text-primary transition"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSLA(sla.id)}
+                                className="p-2 text-muted-foreground hover:text-destructive transition"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <AnimatePresence>
+              {filteredSLAs.length === 0 ? (
+                <motion.div
+                  className="col-span-full"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card className="p-12 text-center border border-primary/20 bg-gradient-to-br from-card to-card/50 backdrop-blur-xl">
+                    <p className="text-muted-foreground">No hay SLAs registrados</p>
+                  </Card>
+                </motion.div>
+              ) : (
+                filteredSLAs.map((sla, index) => (
+                  <motion.div
+                    key={sla.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card className="h-full border border-primary/20 bg-gradient-to-br from-card to-card/60 backdrop-blur-xl p-4 space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground uppercase tracking-wide">{sla.category}</p>
+                          <h3 className="text-xl font-semibold text-foreground">{sla.name}</h3>
+                        </div>
+                        <Badge variant="outline" className={getPriorityColor(sla.priority)}>
+                          {sla.priority}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{sla.description}</p>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="rounded-lg border border-primary/10 bg-secondary/30 p-3">
+                          <p className="text-xs text-muted-foreground">Respuesta</p>
+                          <p className="text-lg font-semibold text-foreground">{sla.responseTime} min</p>
+                        </div>
+                        <div className="rounded-lg border border-primary/10 bg-secondary/30 p-3">
+                          <p className="text-xs text-muted-foreground">Resolución</p>
+                          <p className="text-lg font-semibold text-foreground">{sla.resolutionTime} min</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleEditSLA(sla)}
+                          className="px-3 py-2 text-sm text-muted-foreground hover:text-primary transition"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSLA(sla.id)}
+                          className="px-3 py-2 text-sm text-muted-foreground hover:text-destructive transition"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </motion.div>
+
       <AnimatePresence>
         {dialogOpen && (
           <SLADialog
@@ -251,4 +358,4 @@ export default function SLAPage() {
       </AnimatePresence>
     </div>
   )
-}
+}
